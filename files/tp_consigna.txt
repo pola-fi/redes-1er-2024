@@ -1,0 +1,6 @@
+Adjunto el TP1 para el curso de los martes (version SELECTIVE REPEAT)
+OPCIONAL (para los que aspiran a promocionar)
+En vez de correr cliente y servidor en localhost, levantar mininet y armar una topologia super simple de N hosts conectados a un switch.
+En la diapo de mininet tienen toda la data necesaria para poder armar una topologia.
+Una ventaja de adelantar la investigación de mininet es que les va a simplificar mucho el TP2.
+En clase atendemos consulta al respecto.
