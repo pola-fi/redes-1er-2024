@@ -15,6 +15,9 @@ class Client:
         self.server_port = server_port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+    def close(self):
+        self.socket.close()
+
         
     def obtener_tamano_archivo(self, ruta):
         # Verificar si el archivo existe
@@ -23,10 +26,9 @@ class Client:
             tamano = os.path.getsize(ruta)
             return tamano
 
-    def open_conection(self):
+    def open_conection(self, file_path,file_name):
         #TODO: agregar size del file
-        file_name = "Archivo.txt"
-        file_size = self.obtener_tamano_archivo(file_name)
+        file_size = self.obtener_tamano_archivo(os.path.join(file_path, file_name))
         print(f"file size:{file_size}")
         message = ConnectionMessage(file_name, file_size)
 
@@ -39,7 +41,7 @@ class Client:
         print(f"Server address: {server_address},responded with port: {response_port}")
         self.server_port = response_port
 
-    def upload_file(self, file_name, chunk_size=CHUNK_SENT_BYTES):
+    def upload_file(self, file_path, file_name, chunk_size=CHUNK_SENT_BYTES):
         ## devolver un ACK para que empieze a escuchar y quitar el wait
         time.sleep(1)
         
@@ -47,7 +49,12 @@ class Client:
         prueba_int = 0
 
         offset = 0
-        with open(file_name, 'rb') as file:
+
+        path_file = os.path.join(file_path, file_name)
+
+        print()
+
+        with open(path_file, 'rb') as file:
             while True:
                 file.seek(offset)
                 chunk = file.read(chunk_size)
