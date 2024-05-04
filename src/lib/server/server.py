@@ -1,6 +1,6 @@
 import socket
 import threading
-from lib.server.handle_client import handle_client
+#from lib.server.handle_client import handle_client
 from lib.server.upload_client_handler import UploadClientHandler
 from lib.command import Command
 from lib.encoder import Encoder
