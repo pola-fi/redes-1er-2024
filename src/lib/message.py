@@ -31,5 +31,18 @@ class UploadMessage(Message):
         return {
             'command': self.command,
             'file_data': self.file_data,
-            'file_offeset': self.file_offset
+            'file_offset': self.file_offset
         }
+
+class ResponseUploadMessage(Message):
+    def __init__(self, file_offset):
+        super().__init__(Command.RESPONSE_UPLOAD)
+        self.file_offset = file_offset
+
+    def toJson(self):
+        return {
+            'command': self.command,
+            'file_offset': self.file_offset
+        }
+    
+    

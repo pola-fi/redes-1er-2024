@@ -3,6 +3,11 @@ from lib.message import ConnectionMessage
 from lib.message import UploadMessage
 from lib.encoder import Encoder
 import time
+import os
+import select
+
+CHUNK_SENT_BYTES = 32768 
+TIMEOUT = 1
 
 class Client:
     def __init__(self, server_host, server_port):
@@ -10,9 +15,20 @@ class Client:
         self.server_port = server_port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+        
+    def obtener_tamano_archivo(self, ruta):
+        # Verificar si el archivo existe
+        if os.path.exists(ruta):
+            # Obtener el tamaño en bytes del archivo
+            tamano = os.path.getsize(ruta)
+            return tamano
+
     def open_conection(self):
         #TODO: agregar size del file
-        message = ConnectionMessage("Archivo.txt", 100000)
+        file_name = "Archivo.txt"
+        file_size = self.obtener_tamano_archivo(file_name)
+        print(f"file size:{file_size}")
+        message = ConnectionMessage(file_name, file_size)
 
         self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host,self.server_port))
         response, server_address = self.socket.recvfrom(1024)
@@ -23,18 +39,47 @@ class Client:
         print(f"Server address: {server_address},responded with port: {response_port}")
         self.server_port = response_port
 
-    def upload_file(self, file_name, chunk_size=512):
+    def upload_file(self, file_name, chunk_size=CHUNK_SENT_BYTES):
         ## devolver un ACK para que empieze a escuchar y quitar el wait
         time.sleep(1)
+        
+        # TODO: Simula la perdida de un paquete cada 100, quitar
+        prueba_int = 0
+
         offset = 0
         with open(file_name, 'rb') as file:
             while True:
+                file.seek(offset)
                 chunk = file.read(chunk_size)
                 if not chunk:
                     break
                 message = UploadMessage(chunk.decode(),offset)
-                print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
-                self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host, self.server_port))
+                # print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
+                # TODO: Simula la perdida de un paquete cada 100, quitar
+                if prueba_int % 100 != 0 :
+                    self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host, self.server_port))
+
+                offset = self.handle_recive_message(offset, chunk)
+
+                print(f"offset:{offset},chunk_{len(chunk)}")
+                    
+                prueba_int += 1
+
+    def handle_recive_message(self, offset, chunk):
+        try:
+            ready = select.select([self.socket], [], [], TIMEOUT)
+            if ready[0]:
                 response, _ = self.socket.recvfrom(1024)
-                print("Received response:", Encoder().decode(response.decode()))
-                offset += len(chunk)
+                response_decoded = Encoder().decode(response.decode())
+                response_offset = response_decoded['file_offset']
+                if response_offset == offset:
+                    offset += len(chunk)
+            else:
+                # El temporizador ha expirado, no se recibió ninguna respuesta
+                print("No se recibió respuesta del servidor dentro del tiempo de espera.")
+        
+            return offset
+        
+        except socket.timeout:
+            # El temporizador ha expirado, no se recibió ninguna respuesta
+            print("No se recibió respuesta del servidor dentro del tiempo de espera.")
