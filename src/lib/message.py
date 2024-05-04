@@ -13,7 +13,8 @@ class ConnectionMessage(Message):
     def toJson(self):
         return {
             'command': self.command,
-            'file_size': self.file_size
+            'file_size': self.file_size,
+            'file_name': self.file_name
         }
 
 class DownloadMessage(Message):
