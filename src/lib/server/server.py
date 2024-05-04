@@ -1,6 +1,5 @@
 import socket
 import threading
-from lib.server.handle_client import handle_client
 from lib.server.upload_client_handler import UploadClientHandler
 from lib.command import Command
 from lib.encoder import Encoder
@@ -21,9 +20,9 @@ class Server:
     def listen(self):
         print(f"Server listening on {self.host}:{self.port}")
         while True:
-            data, client_address = self.socket.recvfrom(1024)
+            data, client_address = self.socket.recvfrom(RECEIVED_BYTES)
             message = Encoder().decode(data.decode())
-            print(f"Received message from {client_address}: {message}")
+            #print(f"Received message from {client_address}: {message}")
 
             if message['command'] == Command.CONNECTION:
                 new_port = self.find_free_port()
@@ -31,7 +30,7 @@ class Server:
                 response_message = {'response_port': new_port}
                 self.socket.sendto(Encoder().encode(response_message), client_address)
 
-                handler = UploadClientHandler(self.host, new_port, message['file_size'])
+                handler = UploadClientHandler(self.host, new_port, message['file_size'], message['file_name'])
 
                 threading.Thread(target=handler.start).start()
                 # threading.Thread(target=handle_client, args=(self.host,new_port,)).start()
