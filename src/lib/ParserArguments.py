@@ -40,7 +40,24 @@ class ParserArgument():
     
     def getArgumentPort(self):
         return self.parser.parse_args().port
+
+class ParserArgumentServer(ParserArgument):
     
+    def __init__(self):
+        
+        super().__init__()
+        
+        self.parser.add_argument(   "-s", "--storage", 
+                                    help="storage dir path",
+                                    dest="storage",
+                                    type=str,
+                                    metavar='FILE PATH',
+                                    action='store',
+                                    required=True)
+    
+    def getArgumentStoragePath(self):
+        return self.parser.parse_args().storage    
+       
 class ParserArgumentUploadClient(ParserArgument):
     
     def __init__(self):
@@ -67,3 +84,30 @@ class ParserArgumentUploadClient(ParserArgument):
     
     def getArgumentName(self):
         return self.parser.parse_args().name
+    
+class ParserArgumentDownloadClient(ParserArgument):
+    
+    def __init__(self):
+        
+        super().__init__()
+        
+        self.parser.add_argument(   "-d", "--dst", 
+                                    help="destination file path",
+                                    dest="dst",
+                                    type=str,
+                                    metavar='FILE PATH',
+                                    action='store',
+                                    required=True)
+        self.parser.add_argument(   "-n", "--name", 
+                                    help="file name",
+                                    dest="name",
+                                    type=str,
+                                    metavar='FILE NAME',
+                                    action='store',
+                                    required=True)
+    
+    def getArgumentDestination(self):
+        return self.parser.parse_args().dst
+    
+    def getArgumentName(self):
+        return self.parser.parse_args().name    

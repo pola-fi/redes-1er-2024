@@ -1,5 +1,8 @@
 from lib.server.server import Server
+from lib.ParserArguments import ParserArgumentServer
 
 if __name__ == "__main__":
-    server = Server("127.0.0.1", 8080)
+    
+    parser_arguments = ParserArgumentServer()
+    server = Server(parser_arguments.getArgumentHost(), parser_arguments.getArgumentPort(), parser_arguments.getArgumentStoragePath())
     server.listen()

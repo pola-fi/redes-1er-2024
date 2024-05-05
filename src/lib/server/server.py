@@ -12,9 +12,10 @@ RECEIVED_BYTES = 100000
 DIRECTORY_PATH = '/files/server'
 
 class Server:
-    def __init__(self, host, port):
+    def __init__(self, host, port, dir_path):
         self.host = host
         self.port = port
+        self.dir_path = dir_path
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind((self.host, self.port))
 
@@ -65,14 +66,14 @@ class Server:
             return s.getsockname()[1]
         
     def exist_file(self, file_name):
-        path_file = os.path.join(os.getcwd(),DIRECTORY_PATH.lstrip('/'), file_name)
+        path_file = os.path.join(os.getcwd(),self.dir_path.lstrip('/'), file_name)
         if os.path.exists(path_file):
             return True
         else: 
             return False
         
     def get_size(self, file_name):
-        path_file = os.path.join(os.getcwd(),DIRECTORY_PATH.lstrip('/'), file_name)
+        path_file = os.path.join(os.getcwd(),self.dir_path.lstrip('/'), file_name)
         return os.path.getsize(path_file)
 
     

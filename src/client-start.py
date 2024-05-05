@@ -1,5 +1,5 @@
 from lib.client.client import Client
-from lib.client.ParserArguments import ParserArgumentUploadClient
+from lib.ParserArguments import ParserArgumentUploadClient
 
 if __name__ == "__main__":
     
