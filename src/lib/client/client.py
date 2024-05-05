@@ -6,11 +6,13 @@ from lib.message import StartDownloadMessage
 from lib.message import UploadMessage
 from lib.encoder import Encoder
 from lib.command import Command
+from lib.file import File
 import time
 import os
 import select
 
-CHUNK_SENT_BYTES = 32768 
+CHUNK_OF_BYTES_READ = 32768 
+CHUNK_OF_BYTES_SENT = 32768 
 TIMEOUT = 1
 DIRECTORY_PATH = '/files/client'
 
@@ -23,29 +25,25 @@ class Client:
     def close(self):
         self.socket.close()
 
-        
-    def obtener_tamano_archivo(self, ruta):
-        # Verificar si el archivo existe
-        if os.path.exists(ruta):
-            # Obtener el tamaño en bytes del archivo
-            tamano = os.path.getsize(ruta)
-            return tamano
-
-    def open_conection(self, file_path,file_name):
-        file_size = self.obtener_tamano_archivo(os.path.join(file_path, file_name))
-        print(f"file size:{file_size}")
-        message = ConnectionMessage(file_name, file_size)
+    def open_conection(self, file: File):
+    
+        message = ConnectionMessage(file.name, file.size)
+        print(f"Sending ConectionMessage for file:{file.name} with size:{file.size}")
 
         self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host,self.server_port))
+
         response, server_address = self.socket.recvfrom(1024)
         response_data = Encoder().decode(response.decode())
 
-        response_port = response_data['response_port']
-        print(f"Server address: {server_address},responded with port: {response_port}")
-        self.server_port = response_port
+        self.server_port = response_data['response_port']
+        print(f"Server address: {server_address},assigned port: {self.server_port}")
  
-    def upload_file(self, file_path, file_name, chunk_size=CHUNK_SENT_BYTES):
-        ## devolver un ACK para que empieze a escuchar y quitar el wait
+
+    def upload_with_selective_repeat(self, file: File):
+        
+
+    def upload_file(self, file: File):
+        ## Espera para que el server este escuchando
         time.sleep(1)
         
         # TODO: Simula la perdida de un paquete cada 100, quitar
@@ -53,13 +51,10 @@ class Client:
 
         offset = 0
 
-        path_file = os.path.join(file_path, file_name)
-        print(f"path file:{path_file}")
-
-        with open(path_file, 'rb') as file:
+        with open(file.absolute_path, 'rb') as open_file:
             while True:
-                file.seek(offset)
-                chunk = file.read(chunk_size)
+                open_file.seek(offset)
+                chunk = open_file.read(CHUNK_OF_BYTES_READ)
                 if not chunk:
                     break
                 
