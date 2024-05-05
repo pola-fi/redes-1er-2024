@@ -33,7 +33,7 @@ class ParserArgument():
         return self.parser.parse_args().verbose
     
     def getArgumentQuit(self):
-        return self.parser.parse_args().quit
+        return self.parser.parse_args().quiet
     
     def getArgumentHost(self):
         return self.parser.parse_args().host

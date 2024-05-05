@@ -7,6 +7,7 @@ from lib.encoder import Encoder
 import os
 import time
 import select
+import logging
 
 BYTES_READ_OF_SOCKET = 100000
 DIRECTORY_PATH = '/files/server'
@@ -14,23 +15,24 @@ CHUNK_SIZE = 13684
 TIMEOUT = 1
 
 class UploadClientHandler:
-    def __init__(self, host, port, file_size, file_name):
+    def __init__(self, host, port, file_size, file_name, logging):
         self.host = host
         self.port = port
         self.file_size = file_size
         self.file_name = file_name
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.bind((self.host, self.port))
+        self.logging = logging
 
     def start(self):
-        print(f"Server Handler listening on port {self.port}")
+        self.logging.info(f"Server Handler listening on port {self.port}")
 
         # TODO: Simula la perdida de un paquete cada 100, quitar
         prueba_int = 0
 
         while True:
             data, client_address = self.socket.recvfrom(BYTES_READ_OF_SOCKET)
-            #print(f"Received data on port {self.port} from {client_address}: {data}")
+ #          self.logging.debug(f"Received data on port {self.port} from {client_address}: {data}")
             message = Encoder().decode(data.decode())
             # (f"the message:{message}")
             if (message['command'] == Command.UPLOAD):
@@ -52,7 +54,7 @@ class UploadClientHandler:
     
     def save_file(self, path_file, data, offset):
         # Verificar si el archivo existe y tiene un tamaño mayor o igual al offset
-        print(f"directorio actual:{path_file}")
+        self.logging.debug(f"directorio actual:{path_file}")
         if os.path.exists(path_file) and os.path.getsize(path_file) >= offset:
             with open(path_file, 'r+b') as file:
                 # Mover el puntero de escritura al offset recibido

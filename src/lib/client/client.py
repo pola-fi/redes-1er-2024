@@ -10,7 +10,7 @@ import time
 import os
 import select
 
-CHUNK_SENT_BYTES = 32768 
+CHUNK_SENT_BYTES = 32768
 TIMEOUT = 1
 DIRECTORY_PATH = '/files/client'
 

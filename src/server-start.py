@@ -4,5 +4,9 @@ from lib.ParserArguments import ParserArgumentServer
 if __name__ == "__main__":
     
     parser_arguments = ParserArgumentServer()
-    server = Server(parser_arguments.getArgumentHost(), parser_arguments.getArgumentPort(), parser_arguments.getArgumentStoragePath())
+    server = Server(parser_arguments.getArgumentHost(), 
+                    parser_arguments.getArgumentPort(), 
+                    parser_arguments.getArgumentStoragePath(),
+                    parser_arguments.getArgumentVerbose(),
+                    parser_arguments.getArgumentQuit())
     server.listen()
