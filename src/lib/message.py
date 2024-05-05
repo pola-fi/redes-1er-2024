@@ -18,9 +18,17 @@ class ConnectionMessage(Message):
         }
 
 class DownloadMessage(Message):
-    def __init__(self, file_path):
+    def __init__(self, file_chunk, file_offset):
         super().__init__(Command.DOWNLOAD)
-        self.file_path = file_path
+        self.file_chunk = file_chunk
+        self.file_offset = file_offset
+    
+    def toJson(self):
+        return {
+            'command': self.command,
+            'file_data': self.file_chunk,
+            'file_offset': self.file_offset
+        }
 
 class UploadMessage(Message):
     def __init__(self, file_data, file_offset):
@@ -45,5 +53,39 @@ class ResponseUploadMessage(Message):
             'command': self.command,
             'file_offset': self.file_offset
         }
+    
+class ConnectionDownloadMessage(Message):
+    def __init__(self, file_name):
+        super().__init__(Command.DOWNLOAD_CONECTION)
+        self.file_name = file_name
+
+    def toJson(self):
+        return {
+            'command': self.command,
+            'file_name': self.file_name
+        }
+    
+class ResponseConnectionDownloadMessage(Message):
+    def __init__(self, server_port, file_size):
+        super().__init__(Command.RESPONSE_DOWNLOAD_CONECTION)
+        self.server_port = server_port
+        self.file_size = file_size
+
+    def toJson(self):
+        return {
+            'command': self.command,
+            'server_port': self.server_port,
+            'file_size' : self.file_size
+        }
+    
+class StartDownloadMessage(Message):
+    def __init__(self):
+        super().__init__(Command.DOWNLOAD_START)
+
+    def toJson(self):
+        return {
+            'command': self.command
+        }
+
     
     
