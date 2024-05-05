@@ -1,6 +1,6 @@
 import argparse
 
-class ParserArgumentClient():
+class ParserArgument():
     
     def __init__(self):
         
@@ -28,6 +28,25 @@ class ParserArgumentClient():
                                     action='store',
                                     default=8080,
                                     required=False)
+    
+    def getArgumentVerbose(self):
+        return self.parser.parse_args().verbose
+    
+    def getArgumentQuit(self):
+        return self.parser.parse_args().quit
+    
+    def getArgumentHost(self):
+        return self.parser.parse_args().host
+    
+    def getArgumentPort(self):
+        return self.parser.parse_args().port
+    
+class ParserArgumentUploadClient(ParserArgument):
+    
+    def __init__(self):
+        
+        super().__init__()
+        
         self.parser.add_argument(   "-s", "--src", 
                                     help="source file path",
                                     dest="src",
@@ -43,23 +62,8 @@ class ParserArgumentClient():
                                     action='store',
                                     required=True)
     
-    def getArgumentVerbose(self):
-        return self.parser.parse_args().verbose
-    
-    def getArgumentQuit(self):
-        return self.parser.parse_args().quit
-    
-    def getArgumentHost(self):
-        return self.parser.parse_args().host
-    
-    def getArgumentPort(self):
-        return self.parser.parse_args().port
-    
     def getArgumentSource(self):
         return self.parser.parse_args().src
     
     def getArgumentName(self):
         return self.parser.parse_args().name
-    
-    
-    
