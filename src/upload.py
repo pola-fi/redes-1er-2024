@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     if file_exists(file.absolute_path):
 
-        client.open_conection(file)                              
+        client.open_upload_conection(file)                              
         client.upload_file(file)
     else:
         print('No existe el Archivo a subir')

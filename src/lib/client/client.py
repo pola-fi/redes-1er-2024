@@ -13,11 +13,10 @@ import os
 import select
 import threading
 from lib.utilities.socket import send_msg
-from lib.utilities.socket import recive_msg
+from lib.utilities.socket import receive_msg
 
-CHUNK_OF_BYTES_READ = 5000 
-CHUNK_OF_BYTES_SENT = 5000 
-CHUNK_OF_BYTES_RECEIVED = 10000
+CHUNK_SIZE = 5000
+NUMBER_OF_BYTES_RECEIVED = 10000
 TIMEOUT = 1
 DIRECTORY_PATH = '/files/client'
 SELECTIVE_REPEAT_COUNT = 5
@@ -31,19 +30,126 @@ class Client:
     def close(self):
         self.socket.close()
 
-    def open_conection(self, file: File):
+    ## UPLOAD
+
+    def open_upload_conection(self, file: File):
     
-        message = UploadConnectionMessage(file.name, file.size)
-        print(f"Sending ConectionMessage for file:{file.name} with size:{file.size}")
+        message = UploadConnectionMessage(file.name, file.get_size())
+        print(f"Sending ConectionMessage for file:{file.name} with size:{file.get_size()}")
 
         send_msg(self.socket, message, self.server_host, self.server_port)
-        
-        received_msg, server_address = recive_msg(self.socket)
+    
+        received_msg, server_address = receive_msg(self.socket)
 
         if received_msg['command'] == Command.RESPONSE_CONNECTION:
             self.server_port = received_msg['server_port']
-            print(f"Server address: {server_address},assigned port: {self.server_port}")
+            print(f"On Server address: {server_address},assigned port: {self.server_port}")
+
+    def upload_file(self, file: File):
+        ## Espera para que el server este escuchando
+        time.sleep(1)
+
+        # para silumar una perdida de paquete
+        number_of_packet = 1
+        offset = 0
+
+        with open(file.absolute_path, 'rb') as open_file:
+            while True:
+                open_file.seek(offset)
+                chunk = open_file.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                
+                message = UploadMessage(chunk.decode(),offset)
+                # TODO: Simula la perdida de un paquete cada 5
+                if number_of_packet % 5 != 0 :
+                    send_msg(self.socket, message, self.server_host, self.server_port)
+
+                chunk_size = len(chunk)
+                offset = self.handle_recive_message(offset, chunk_size)
+
+                print(f"offset:{offset},chunk size:{chunk_size}")
+                    
+                number_of_packet += 1
+
+    def handle_recive_message(self, offset, chunk_size):
+        try:
+            ready = select.select([self.socket], [], [], TIMEOUT)
+            if ready[0]:
+                response_message, _ = receive_msg(self.socket)
+
+                if response_message['file_offset'] == offset:
+                    offset += chunk_size
+            else:
+                # El temporizador ha expirado, no se recibió ninguna respuesta
+                print(f"Time out after {TIMEOUT} seconds")
+        
+            return offset
+        
+        except socket.timeout:
+            # El temporizador ha expirado, no se recibió ninguna respuesta
+            print("Sever Time out")
  
+    ## Selective Upload
+
+
+    ## Download
+
+    def download_open_conection(self,file: File):
+        message = ConnectionDownloadMessage(file.name)
+
+        send_msg(self.socket, message, self.server_host, self.server_port)
+        response_message, server_address = receive_msg(self.socket)
+    
+        if response_message['command'] == Command.RESPONSE_DOWNLOAD_CONECTION:
+            response_port = response_message['server_port']
+            file_size = response_message['file_size']
+            print(f"Server address: {server_address},responded with port: {response_port}")
+            
+            message = StartDownloadMessage()
+            send_msg(self.socket, message, self.server_host, self.server_port)
+
+            self.socket.close()
+            self.server_port = response_port
+            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.socket.bind((self.server_host, self.server_port))
+            print(f"Connection started on host:{self.server_host}, on port:{self.server_port}")
+
+            return file_size
+
+    def download_file(self, file: File, file_size_to_download):
+
+        # Simula la perdida de un paquete
+        number_of_packet = 1
+
+        file.create()
+        
+        while file.get_size() < file_size_to_download:
+            response_message, server_address = receive_msg(self.socket)
+            if (response_message['command'] == Command.DOWNLOAD):
+
+                data = response_message['file_data']
+                offset = response_message['file_offset']
+
+                print(f"Recibed data with offset:{offset}")
+                file.write(data, offset)
+                self.handle_send_ack(offset, server_address, number_of_packet)
+
+                number_of_packet += 1        
+
+    #TODO: Vuela, con la perdida de paquetas, queda solo el envio 
+    def handle_send_ack(self, offset, client_address, number_of_packet):
+
+        #prueba para simular perdida de paquete cada 6
+        print(f"number of packet {number_of_packet}")
+        if number_of_packet % 6 != 0 :
+            message = ResponseUploadMessage(offset)
+            send_msg(self.socket, message, client_address[0], client_address[1])
+        else:
+            print("no se envia este ACK")
+
+    ## Selective Download
+
     def write_to_socket(self):
 
         with open(self.file.absolute_path, 'rb') as open_file:
@@ -52,7 +158,7 @@ class Client:
                     print(f"chunk number sent: {self.window.next_sent_element() / self.window.chunk_size}, offset: {self.window.next_sent_element()}")
                     print(f"next offset: {self.window.next_sent_element()}")
                     open_file.seek(self.window.next_sent_element())
-                    chunk = open_file.read(CHUNK_OF_BYTES_READ)
+                    chunk = open_file.read(CHUNK_SIZE)
                     if not chunk:
                         print("no hay chunk")
                         break
@@ -147,128 +253,12 @@ class Client:
                     
         
 
-    def upload_file(self, file: File):
-        ## Espera para que el server este escuchando
-        time.sleep(1)
-        
-        # TODO: Simula la perdida de un paquete cada 100, quitar
-        prueba_int = 0
-
-        offset = 0
-
-        with open(file.absolute_path, 'rb') as open_file:
-            while True:
-                open_file.seek(offset)
-                chunk = open_file.read(CHUNK_OF_BYTES_READ)
-                if not chunk:
-                    break
-                
-                message = UploadMessage(chunk.decode(),offset)
-                # print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
-                # TODO: Simula la perdida de un paquete cada 100, quitar
-                if prueba_int % 100 != 0 :
-                    self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host, self.server_port))
-
-                offset = self.handle_recive_message(offset, chunk)
-
-                print(f"offset:{offset},chunk_{len(chunk)}")
-                    
-                prueba_int += 1
-
-    def handle_recive_message(self, offset, chunk):
-        try:
-            ready = select.select([self.socket], [], [], TIMEOUT)
-            if ready[0]:
-                response, _ = self.socket.recvfrom(1024)
-                response_decoded = Encoder().decode(response.decode())
-                response_offset = response_decoded['file_offset']
-                if response_offset == offset:
-                    offset += len(chunk)
-            else:
-                # El temporizador ha expirado, no se recibió ninguna respuesta
-                print("No se recibió respuesta del servidor dentro del tiempo de espera.")
-        
-            return offset
-        
-        except socket.timeout:
-            # El temporizador ha expirado, no se recibió ninguna respuesta
-            print("No se recibió respuesta del servidor dentro del tiempo de espera.")
-
-    def download_open_conection(self,file_name):
-        message = ConnectionDownloadMessage(file_name)
-
-        self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host,self.server_port))
-        response, server_address = self.socket.recvfrom(1024)
-        response_message = Encoder().decode(response.decode())
+    
 
     
-        if response_message['command'] == Command.RESPONSE_DOWNLOAD_CONECTION:
-            response_port = response_message['server_port']
-            print(f"Server address: {server_address},responded with port: {response_port}")
-            
-            message = StartDownloadMessage()
-            self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host,self.server_port))
-            self.socket.close()
-            self.server_port = response_port
         
     
-    def download_file(self, file_client_absolute_path):
-        ## devolver un ACK para que empieze a escuchar y quitar el wait
-        
-        # TODO: Simula la perdida de un paquete cada 100, quitar
-        prueba_int = 0
-
-        print(f"Connection started on host:{self.server_host}, on port:{self.server_port}-")
-        
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind((self.server_host, self.server_port))
-
-        while True:
-            
-            data, server_address = self.socket.recvfrom(CHUNK_OF_BYTES_READ)
-            # print(f"Received data on port {self.server_port} from {server_address}")
-            message = Encoder().decode(data.decode())
-            # print("recibi un msg y decodifique")
-            # (f"the message:{message}")
-            if (message['command'] == Command.DOWNLOAD):
-                # print("es un DOWNLOAD msg")
-                prueba_int = self.handle_upload(message, server_address, file_client_absolute_path, prueba_int)
-
-
-    def handle_upload(self, message, client_address, file_path, prueba_int):
-        data = message['file_data']
-        offset = message['file_offset']
-        print(f"Recibed data with offset:{offset}")
-        response_message = ResponseUploadMessage(offset).toJson()
-                
-        self.save_file(file_path, data, offset)
-        prueba_int = self.handle_send_ack(response_message, client_address, prueba_int)
-
-        prueba_int =+ 1
-        return prueba_int
     
+
+
     
-    def save_file(self, path_file, data, offset):
-        # Verificar si el archivo existe y tiene un tamaño mayor o igual al offset
-        if os.path.exists(path_file) and os.path.getsize(path_file) >= offset:
-            with open(path_file, 'r+b') as file:
-                # Mover el puntero de escritura al offset recibido
-                file.seek(offset)
-                # Escribir los datos en el archivo
-                file.write(data.encode())
-        else:
-            # Si el archivo no existe o el offset es mayor que el tamaño actual del archivo,
-            # se crea o se actualiza el archivo desde el principio
-            with open(path_file, 'ab') as file:
-                file.write(data.encode())
-
-    #TODO: Vuela, con la perdida de paquetas, queda solo el envio 
-    def handle_send_ack(self, response_message, client_address, prueba_int):
-        listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-        #TODO: prueba para simular perdida de paquete, quitar
-        if prueba_int % 3 != 0 :
-            listener_socket.sendto(Encoder().encode(response_message), client_address)
-        # listener_socket.close()
-        else:
-            print("no se envia este ACK")

@@ -7,4 +7,7 @@ def get_absolute_file_path(directory_path, file_name):
     return os.path.join(os.getcwd(), directory_path.lstrip('/'), file_name)
 
 def get_file_size(directory_path):
-    return os.path.getsize(directory_path)
+    if file_exists(directory_path):
+        return os.path.getsize(directory_path)
+    else:
+        return 0
