@@ -215,9 +215,7 @@ class Client:
         # TODO: Simula la perdida de un paquete cada 100, quitar
         prueba_int = 0
 
-        path_file = os.path.join(os.getcwd(), file_path.lstrip('/'), file_name)
-
-        print(f"path:{path_file}")
+        print(f"path:{file_path}")
 
         print(f"Connection started on host:{self.server_host}, on port:{self.server_port}-")
         
@@ -233,7 +231,7 @@ class Client:
             # (f"the message:{message}")
             if (message['command'] == Command.DOWNLOAD):
                 # print("es un DOWNLOAD msg")
-                prueba_int = self.handle_upload(message, server_address, path_file, prueba_int)
+                prueba_int = self.handle_upload(message, server_address, file_path, prueba_int)
 
 
     def handle_upload(self, message, client_address, file_path, prueba_int):
