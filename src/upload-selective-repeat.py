@@ -1,14 +1,16 @@
 from lib.client.client import Client
+from lib.ParserArguments import ParserArgumentUploadClient
 from lib.utilities.file_utilities import get_absolute_file_path
 from lib.utilities.file_utilities import file_exists
 from lib.file import File
 
 if __name__ == "__main__":
     
-    client = Client("127.0.0.1", 8080)
+    parser_arguments = ParserArgumentUploadClient()
+    client = Client(parser_arguments.getArgumentHost(), parser_arguments.getArgumentPort())
 
-    file_name = 'Archivo.txt'
-    directory_of_file_relative_path = '/files/client'
+    file_name = parser_arguments.getArgumentName()
+    directory_of_file_relative_path = parser_arguments.getArgumentSource()
 
     file_absolute_path = get_absolute_file_path(directory_of_file_relative_path, file_name)
     
