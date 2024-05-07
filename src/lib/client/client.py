@@ -110,47 +110,57 @@ class Client:
 
     def write_chunk_to_socket(self):
 
+        number_of_packet = 1
+
         with open(self.file.absolute_path, 'rb') as open_file:
             while True:
                 if self.window.has_space():
-                    print(f"chunk number sent: {self.window.next_sent_element() / self.window.chunk_size}, offset: {self.window.next_sent_element()}")
-                    print(f"next offset: {self.window.next_sent_element()}")
-                    open_file.seek(self.window.next_sent_element())
+                    
+                    offset = self.window.next_sent_element()
+                    
+                    print(f"mi offset a enviar es: {offset}")
+                    open_file.seek(offset)
                     chunk = open_file.read(CHUNK_SIZE)
                     if not chunk:
                         print("no hay chunk")
                         break
-                    
-                    message = UploadMessage(chunk.decode(), self.window.next_sent_element())
+
+                
+                    message = UploadMessage(chunk.decode(), offset)
+
                     #print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
                     # TODO: Simula la perdida de un paquete cada 100, quitar
-                    #if chunk_number % 100 != 0 :
+                    if number_of_packet % 4 != 0 :
 
-                    self.window.add(self.window.next_sent_element())
-                    self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host, self.server_port))
-                    self.window.last_sended = self.window.next_sent_element()
-                
-                    #self.offset =+ CHUNK_OF_BYTES_READ
-                else: 
-                    print(f"windows dont have space")
-                    time.sleep(1)
+                        self.window.add(offset)
+                        print(f"chunk number sent: {offset / self.window.chunk_size}, offset: {offset}")
+                        send_msg(self.socket, message, self.server_host, self.server_port)
+
+                        self.window.last_sended = self.window.next_sent_element()
+
+                    number_of_packet += 1
+                #else: 
+                    #print(f"windows dont have space")
+                    #time.sleep(1)
+            print("termine de mandar escritura")
 
     def read_ack_of_socket(self):
         while True:
-            if self.window.has_space():
-                print(f"window size before receiving: {self.window.size()}")
-                response, _ = self.socket.recvfrom(1024)
-                response_decoded = Encoder().decode(response.decode())
-                response_offset = int(response_decoded['file_offset'])
+
+                response_msg, _ = receive_msg(self.socket)
+                response_offset = int(response_msg['file_offset'])
+
                 print(f"recived chunk number:{response_offset / CHUNK_SIZE}, offset:{response_offset}")
                 if self.window.is_first(response_offset):
                     self.window.remove_first()
                     self.window.last_received = response_offset
+
                 else: 
                     self.window.remove_all()
-            else:
-                print(f"windows dont have space")
-                #print(f"window size: {self.window.size()}")
+                    self.window.last_sended = self.window.last_received
+            #else:
+                #print(f"windows dont have space")
+                #time.sleep(1)
  
     ## Download
 

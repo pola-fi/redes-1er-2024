@@ -12,7 +12,7 @@ class Window:
 
     def next_sent_element(self):
         with self.lock:
-            return self.last_sended + self.chunk_size
+            return self.last_received + self.chunk_size
 
     def add(self, element):
         

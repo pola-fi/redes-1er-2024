@@ -9,10 +9,9 @@ import time
 import select
 import logging
 
-CHUNK_OF_BYTES_SENT = 32768 
-BYTES_READ_OF_SOCKET = 100000
+NUMBER_OF_BYTES_RECEIVED = 10000
 DIRECTORY_PATH = '/files/server'
-CHUNK_SIZE = 13684
+CHUNK_SIZE = 5000
 TIMEOUT = 1
 
 class UploadClientHandler:
@@ -32,7 +31,7 @@ class UploadClientHandler:
         prueba_int = 0
 
         while True:
-            data, client_address = self.socket.recvfrom(BYTES_READ_OF_SOCKET)
+            data, client_address = self.socket.recvfrom(NUMBER_OF_BYTES_RECEIVED)
             # self.logging.debug(f"Received data on port {self.port} from {client_address}: {data}")
             message = Encoder().decode(data.decode())
             # (f"the message:{message}")
@@ -42,7 +41,7 @@ class UploadClientHandler:
     def handle_upload(self, message, client_address, prueba_int):
         data = message['file_data']
         offset = message['file_offset']
-        self.logging.debug(f"recived msg with chunks: {offset/CHUNK_OF_BYTES_SENT}")
+        self.logging.debug(f"recived msg with chunks: {offset/CHUNK_SIZE}")
         response_message = ResponseUploadMessage(offset).toJson()
         
         prueba_int = self.handle_send_ack(response_message, client_address, prueba_int)
@@ -74,12 +73,12 @@ class UploadClientHandler:
         listener_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         #TODO: prueba para simular perdida de paquete, quitar
-        #if prueba_int % 50 != 0 :
-        self.logging.debug(f"enviando ack con chunk:{response_message['file_offset']/ CHUNK_OF_BYTES_SENT}")
-        listener_socket.sendto(Encoder().encode(response_message), client_address)
-        listener_socket.close()
-        #else:
-        #    print("no se envia este ACK")
+        if prueba_int % 3 != 0 :
+            self.logging.debug(f"enviando ack con chunk:{response_message['file_offset']/ CHUNK_SIZE}")
+            listener_socket.sendto(Encoder().encode(response_message), client_address)
+            listener_socket.close()
+        else:
+           print("no se envia este ACK")
 
 class DownloadClientHandler:
     def __init__(self, client_host, client_port, file_size, file_name):
