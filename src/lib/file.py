@@ -8,12 +8,11 @@ class File():
         self.name = name
 
     def create(self):
-        try:
-            if file_exists(self.absolute_path):
-                os.remove(self.absolute_path)
-
-                with open(self.absolute_path, "w") as f:
-                    f.close()
+        if file_exists(self.absolute_path):
+            os.remove(self.absolute_path)
+        try:             
+            with open(self.absolute_path, "w") as f:
+                f.close()
             
         except Exception as e:
             print("Ocurrió un error al intentar crear o cerrar el archivo:", e)
