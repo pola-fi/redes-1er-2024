@@ -89,10 +89,69 @@ class Client:
         except socket.timeout:
             # El temporizador ha expirado, no se recibió ninguna respuesta
             print("Sever Time out")
- 
+
     ## Selective Upload
 
+    def upload_with_selective_repeat(self, file: File):
+        ## Espera para que el server este escuchando
+        time.sleep(1)
 
+        self.file = file
+        self.window = Window(SELECTIVE_REPEAT_COUNT, CHUNK_SIZE)
+
+        escribir_thread = threading.Thread(target=self.write_chunk_to_socket)
+        leer_thread = threading.Thread(target=self.read_ack_of_socket)
+
+        escribir_thread.start()
+        leer_thread.start()
+
+        escribir_thread.join()
+        leer_thread.join()
+
+    def write_chunk_to_socket(self):
+
+        with open(self.file.absolute_path, 'rb') as open_file:
+            while True:
+                if self.window.has_space():
+                    print(f"chunk number sent: {self.window.next_sent_element() / self.window.chunk_size}, offset: {self.window.next_sent_element()}")
+                    print(f"next offset: {self.window.next_sent_element()}")
+                    open_file.seek(self.window.next_sent_element())
+                    chunk = open_file.read(CHUNK_SIZE)
+                    if not chunk:
+                        print("no hay chunk")
+                        break
+                    
+                    message = UploadMessage(chunk.decode(), self.window.next_sent_element())
+                    #print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
+                    # TODO: Simula la perdida de un paquete cada 100, quitar
+                    #if chunk_number % 100 != 0 :
+
+                    self.window.add(self.window.next_sent_element())
+                    self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host, self.server_port))
+                    self.window.last_sended = self.window.next_sent_element()
+                
+                    #self.offset =+ CHUNK_OF_BYTES_READ
+                else: 
+                    print(f"windows dont have space")
+                    time.sleep(1)
+
+    def read_ack_of_socket(self):
+        while True:
+            if self.window.has_space():
+                print(f"window size before receiving: {self.window.size()}")
+                response, _ = self.socket.recvfrom(1024)
+                response_decoded = Encoder().decode(response.decode())
+                response_offset = int(response_decoded['file_offset'])
+                print(f"recived chunk number:{response_offset / CHUNK_SIZE}, offset:{response_offset}")
+                if self.window.is_first(response_offset):
+                    self.window.remove_first()
+                    self.window.last_received = response_offset
+                else: 
+                    self.window.remove_all()
+            else:
+                print(f"windows dont have space")
+                #print(f"window size: {self.window.size()}")
+ 
     ## Download
 
     def download_open_conection(self,file: File):
@@ -137,6 +196,8 @@ class Client:
 
                 number_of_packet += 1        
 
+        #TODO: Agregar envio msg de finalizacion y ACK, o que el server deje de enviar ante un time out, si es el ultimo paquete
+
     #TODO: Vuela, con la perdida de paquetas, queda solo el envio 
     def handle_send_ack(self, offset, client_address, number_of_packet):
 
@@ -149,106 +210,7 @@ class Client:
             print("no se envia este ACK")
 
     ## Selective Download
-
-    def write_to_socket(self):
-
-        with open(self.file.absolute_path, 'rb') as open_file:
-            while True:
-                if self.window.has_space():
-                    print(f"chunk number sent: {self.window.next_sent_element() / self.window.chunk_size}, offset: {self.window.next_sent_element()}")
-                    print(f"next offset: {self.window.next_sent_element()}")
-                    open_file.seek(self.window.next_sent_element())
-                    chunk = open_file.read(CHUNK_SIZE)
-                    if not chunk:
-                        print("no hay chunk")
-                        break
-                    
-                    message = UploadMessage(chunk.decode(), self.window.next_sent_element())
-                    #print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
-                    # TODO: Simula la perdida de un paquete cada 100, quitar
-                    #if chunk_number % 100 != 0 :
-
-                    self.window.add(self.window.next_sent_element())
-                    self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host, self.server_port))
-                    self.window.last_sended = self.window.next_sent_element()
-                
-                    #self.offset =+ CHUNK_OF_BYTES_READ
-                else: 
-                    print(f"windows dont have space")
-                    time.sleep(1)
-
-    def read_of_socket(self):
-        while True:
-            if self.window.has_space():
-                print(f"window size before receiving: {self.window.size()}")
-                response, _ = self.socket.recvfrom(1024)
-                response_decoded = Encoder().decode(response.decode())
-                response_offset = int(response_decoded['file_offset'])
-                print(f"recived chunk number:{response_offset / CHUNK_OF_BYTES_READ}, offset:{response_offset}")
-                if self.window.is_first(response_offset):
-                    self.window.remove_first()
-                    self.window.last_received = response_offset
-                else: 
-                    self.window.remove_all()
-            else:
-                print(f"windows dont have space")
-                #print(f"window size: {self.window.size()}")
-
-    def upload_with_selective_repeat(self, file: File):
-        time.sleep(1)
-        self.file = file
-        self.number_chunk_for_send = SELECTIVE_REPEAT_COUNT
-        self.window = Window(SELECTIVE_REPEAT_COUNT, CHUNK_OF_BYTES_READ)
-
-        escribir_thread = threading.Thread(target=self.write_to_socket)
-        leer_thread = threading.Thread(target=self.read_of_socket)
-        escribir_thread.start()
-        leer_thread.start()
-        escribir_thread.join()
-        leer_thread.join()
-        
-            #while True:
-
-                
-                # self.socket.settimeout(TIMEOUT)
-
-                # print("pase a recibir ack")
-                # print(f"hay algo en la ventana?:{not window.is_empty()}")
-                # print()
-                # while not window.is_empty():
-                #     try:
-                #         if window.has_space():
-                #             response, _ = self.socket.recvfrom(1024)
-                #             response_decoded = Encoder().decode(response.decode())
-                #             response_offset = int(response_decoded['file_offset'])
-                #             print(f"recived chunk number:{response_offset / CHUNK_OF_BYTES_READ}")
-                #             if response_offset == offset:
-                #                 offset += len(chunk)
-                #                 print(f"offset old:{offset}")
-                            
-                #     except socket.timeout:
-                #         break
-
-
-                    # try:
-                    #     ready = select.select([self.socket], [], [], TIMEOUT)
-                    #     if ready[0]:
-                    #         response, _ = self.socket.recvfrom(1024)
-                    #         response_decoded = Encoder().decode(response.decode())
-                    #         response_offset = response_decoded['file_offset']
-                    #         if response_offset == offset:
-                    #             offset += len(chunk)
-                    #     else:
-                    #         # El temporizador ha expirado, no se recibió ninguna respuesta
-                    #         print("No se recibió respuesta del servidor dentro del tiempo de espera.")
-                
-                    # except socket.timeout:
-                    #     # El temporizador ha expirado, no se recibió ninguna respuesta
-                    #     print("No se recibió respuesta del servidor dentro del tiempo de espera.")
-
-                    
-                    # offset = self.handle_recive_message(offset, chunk)
-                # print(f"offset:{offset},chunk_{len(chunk)}")
+    
                         
                     
         
