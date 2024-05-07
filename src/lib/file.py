@@ -22,7 +22,7 @@ class File():
     
     def write(self, data, offset):
         if file_exists(self.absolute_path):
-            with open(self.absolute_path, 'w+b') as file:
+            with open(self.absolute_path, 'r+b') as file:
                 file.seek(offset)
                 file.write(data.encode())
         else:

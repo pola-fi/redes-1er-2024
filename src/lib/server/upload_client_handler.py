@@ -90,6 +90,7 @@ class DownloadClientHandler:
 
     def start(self):
         print(f"Server Handler listening on port {self.client_port}")
+        time.sleep(1)
 
         # TODO: Simula la perdida de un paquete cada 100, quitar
         prueba_int = 0

@@ -67,7 +67,7 @@ class Server:
 
                     data, client_address = self.socket.recvfrom(RECEIVED_BYTES)
                     message_start_ack = Encoder().decode(data.decode())
-                    logging.debug(f"mensaje:{message}")
+                    logging.debug(f"mensaje:{message_start_ack}")
 
                     if message_start_ack['command'] == Command.DOWNLOAD_START:
                         logging.info("Client Started listening for download")
