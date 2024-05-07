@@ -19,7 +19,7 @@ CHUNK_SIZE = 5000
 NUMBER_OF_BYTES_RECEIVED = 10000
 TIMEOUT = 1
 DIRECTORY_PATH = '/files/client'
-SELECTIVE_REPEAT_COUNT = 5
+SELECTIVE_REPEAT_COUNT = 3
 
 class Client:
     def __init__(self, server_host, server_port):
@@ -111,56 +111,73 @@ class Client:
     def write_chunk_to_socket(self):
 
         number_of_packet = 1
+        not_break = True
 
         with open(self.file.absolute_path, 'rb') as open_file:
-            while True:
+            while not_break or (self.window.last_received < self.window.last_sended):
                 if self.window.has_space():
+                    if self.window.is_empty():
+                        offset = self.window.last_received + CHUNK_SIZE
+                    else:    
+                        offset = self.window.next_sent_element()
                     
-                    offset = self.window.next_sent_element()
-                    
-                    print(f"mi offset a enviar es: {offset}")
+                    #print(f"mi offset a enviar es: {offset}")
                     open_file.seek(offset)
                     chunk = open_file.read(CHUNK_SIZE)
                     if not chunk:
                         print("no hay chunk")
-                        break
+                        # time.sleep(1)
+                        not_break = False
+                    else: 
+                        message = UploadMessage(chunk.decode(), offset)
 
-                
-                    message = UploadMessage(chunk.decode(), offset)
+                        #print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
+                        # TODO: Simula la perdida de un paquete cada 100, quitar
+                        
+                        if number_of_packet % 3 != 0 :
 
-                    #print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
-                    # TODO: Simula la perdida de un paquete cada 100, quitar
-                    if number_of_packet % 4 != 0 :
+                            self.window.add(offset)
+                            print(f"chunk number sent: {offset / self.window.chunk_size}, offset: {offset}")
+                            send_msg(self.socket, message, self.server_host, self.server_port)
+                            self.window.last_sended = offset
 
-                        self.window.add(offset)
-                        print(f"chunk number sent: {offset / self.window.chunk_size}, offset: {offset}")
-                        send_msg(self.socket, message, self.server_host, self.server_port)
+                        
 
-                        self.window.last_sended = self.window.next_sent_element()
+                        number_of_packet += 1
 
-                    number_of_packet += 1
-                #else: 
-                    #print(f"windows dont have space")
-                    #time.sleep(1)
+                    
+                # else: 
+                #     print(f"windows dont have space")
+                #     time.sleep(1)
             print("termine de mandar escritura")
+            print(f"windows last_received:{self.window.last_received}, windows last_sended:{self.window.last_sended}")
+
 
     def read_ack_of_socket(self):
         while True:
+                
+            try:
+                ready = select.select([self.socket], [], [], TIMEOUT)
+                if ready[0]:
+                    response_msg, _ = receive_msg(self.socket)
+                    response_offset = int(response_msg['file_offset'])
 
-                response_msg, _ = receive_msg(self.socket)
-                response_offset = int(response_msg['file_offset'])
+                    print(f"recived chunk number:{response_offset / CHUNK_SIZE}, offset:{response_offset}")
+                    if not self.window.is_empty() and self.window.is_first(response_offset):
+                        self.window.remove_first()
+                        self.window.last_received = response_offset
 
-                print(f"recived chunk number:{response_offset / CHUNK_SIZE}, offset:{response_offset}")
-                if self.window.is_first(response_offset):
-                    self.window.remove_first()
-                    self.window.last_received = response_offset
-
-                else: 
+                    else: 
+                        self.window.remove_all()
+                else:
+                    # El temporizador ha expirado, no se recibió ninguna respuesta
+                    print(f"Time out after {TIMEOUT} seconds")
                     self.window.remove_all()
-                    self.window.last_sended = self.window.last_received
-            #else:
-                #print(f"windows dont have space")
-                #time.sleep(1)
+                        
+            except socket.timeout:
+                # El temporizador ha expirado, no se recibió ninguna respuesta
+                print("Sever Time out")
+                self.window.remove_all()
  
     ## Download
 
