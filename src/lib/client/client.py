@@ -1,5 +1,5 @@
 import socket
-from lib.message import ConnectionMessage
+from lib.message import UploadConnectionMessage
 from lib.message import ConnectionDownloadMessage
 from lib.message import ResponseUploadMessage
 from lib.message import StartDownloadMessage
@@ -12,9 +12,12 @@ import time
 import os
 import select
 import threading
+from lib.utilities.socket import send_msg
+from lib.utilities.socket import recive_msg
 
-CHUNK_OF_BYTES_READ = 32768 
-CHUNK_OF_BYTES_SENT = 32768 
+CHUNK_OF_BYTES_READ = 5000 
+CHUNK_OF_BYTES_SENT = 5000 
+CHUNK_OF_BYTES_RECEIVED = 10000
 TIMEOUT = 1
 DIRECTORY_PATH = '/files/client'
 SELECTIVE_REPEAT_COUNT = 5
@@ -30,16 +33,16 @@ class Client:
 
     def open_conection(self, file: File):
     
-        message = ConnectionMessage(file.name, file.size)
+        message = UploadConnectionMessage(file.name, file.size)
         print(f"Sending ConectionMessage for file:{file.name} with size:{file.size}")
 
-        self.socket.sendto(Encoder().encode(message.toJson()), (self.server_host,self.server_port))
+        send_msg(self.socket, message, self.server_host, self.server_port)
+        
+        received_msg, server_address = recive_msg(self.socket)
 
-        response, server_address = self.socket.recvfrom(1024)
-        response_data = Encoder().decode(response.decode())
-
-        self.server_port = response_data['response_port']
-        print(f"Server address: {server_address},assigned port: {self.server_port}")
+        if received_msg['command'] == Command.RESPONSE_CONNECTION:
+            self.server_port = received_msg['server_port']
+            print(f"Server address: {server_address},assigned port: {self.server_port}")
  
     def write_to_socket(self):
 

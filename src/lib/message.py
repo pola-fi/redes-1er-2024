@@ -1,12 +1,17 @@
 from lib.command import Command
+from abc import ABC, abstractmethod
 
-class Message:
+class Message(ABC):
     def __init__(self, command):
         self.command = command
 
-class ConnectionMessage(Message):
+    @abstractmethod
+    def toJson(self):
+        pass
+
+class UploadConnectionMessage(Message):
     def __init__(self, file_name ,file_size):
-        super().__init__(Command.CONNECTION)
+        super().__init__(Command.UPLOAD_CONNECTION)
         self.file_size = file_size
         self.file_name = file_name
     
@@ -16,6 +21,18 @@ class ConnectionMessage(Message):
             'file_size': self.file_size,
             'file_name': self.file_name
         }
+    
+class ResponseUploadConectionMessage(Message):
+    def __init__(self, port):
+        super().__init__(Command.RESPONSE_CONNECTION)
+        self.port = port
+
+    def toJson(self):
+        return {
+            'command': self.command,
+            'server_port' : self.port
+        }
+
 
 class DownloadMessage(Message):
     def __init__(self, file_chunk, file_offset):

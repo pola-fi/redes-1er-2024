@@ -5,6 +5,7 @@ from lib.server.upload_client_handler import DownloadClientHandler
 from lib.command import Command
 from lib.encoder import Encoder
 from lib.message import ResponseConnectionDownloadMessage
+from lib.message import ResponseUploadConectionMessage
 import os
 import time
 import logging
@@ -41,11 +42,11 @@ class Server:
             message = Encoder().decode(data.decode())
             logging.debug(f"Received message from {client_address}: {message}")
             
-            if message['command'] == Command.CONNECTION:
+            if message['command'] == Command.UPLOAD_CONNECTION:
                 new_port = self.find_free_port()
                 logging.info(f"Assigned port {new_port} to client {client_address}")
-                response_message = {'response_port': new_port}
-                self.socket.sendto(Encoder().encode(response_message), client_address)
+                response_message = ResponseUploadConectionMessage(new_port)
+                self.socket.sendto(Encoder().encode(response_message.toJson()), client_address)
 
                 handler = UploadClientHandler(self.host, new_port, message['file_size'], message['file_name'],logging)
 
