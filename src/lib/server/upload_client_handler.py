@@ -33,7 +33,7 @@ class UploadClientHandler:
 
         while True:
             data, client_address = self.socket.recvfrom(BYTES_READ_OF_SOCKET)
-            self.logging.debug(f"Received data on port {self.port} from {client_address}: {data}")
+            # self.logging.debug(f"Received data on port {self.port} from {client_address}: {data}")
             message = Encoder().decode(data.decode())
             # (f"the message:{message}")
             if (message['command'] == Command.UPLOAD):
@@ -42,7 +42,7 @@ class UploadClientHandler:
     def handle_upload(self, message, client_address, prueba_int):
         data = message['file_data']
         offset = message['file_offset']
-        print(f"recived msg with chunks: {offset/CHUNK_OF_BYTES_SENT}")
+        self.logging.debug(f"recived msg with chunks: {offset/CHUNK_OF_BYTES_SENT}")
         response_message = ResponseUploadMessage(offset).toJson()
         
         prueba_int = self.handle_send_ack(response_message, client_address, prueba_int)
@@ -56,7 +56,7 @@ class UploadClientHandler:
     
     def save_file(self, path_file, data, offset):
         # Verificar si el archivo existe y tiene un tamaño mayor o igual al offset
-        self.logging.debug(f"directorio actual:{path_file}")
+        # self.logging.debug(f"directorio actual:{path_file}")
         if os.path.exists(path_file) and os.path.getsize(path_file) >= offset:
             with open(path_file, 'r+b') as file:
                 # Mover el puntero de escritura al offset recibido
@@ -75,7 +75,7 @@ class UploadClientHandler:
 
         #TODO: prueba para simular perdida de paquete, quitar
         #if prueba_int % 50 != 0 :
-        print(f"enviando ack con chunk:{response_message['file_offset']/ CHUNK_OF_BYTES_SENT}")
+        self.logging.debug(f"enviando ack con chunk:{response_message['file_offset']/ CHUNK_OF_BYTES_SENT}")
         listener_socket.sendto(Encoder().encode(response_message), client_address)
         listener_socket.close()
         #else:

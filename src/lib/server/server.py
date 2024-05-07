@@ -23,13 +23,13 @@ class Server:
 
         if verbose == False and quiet == False:
             level='INFO'
-            logging.basicConfig(level=level)
+            logging.basicConfig(format='%(levelname)s : %(asctime)s : %(message)s',level=level)
         if verbose:
             level='DEBUG'
-            logging.basicConfig(level=level)
+            logging.basicConfig(format='%(levelname)s : %(asctime)s : %(message)s',level=level)
         if quiet:
             level='ERROR'
-            logging.basicConfig(level=level)      
+            logging.basicConfig(format='%(levelname)s : %(asctime)s : %(message)s',level=level)      
             
     def close(self):
         self.socket.close()
@@ -38,7 +38,10 @@ class Server:
     def listen(self):
         logging.info(f"Server listening on {self.host}:{self.port}")
         while True:
-            data, client_address = self.socket.recvfrom(RECEIVED_BYTES)
+            try:
+                data, client_address = self.socket.recvfrom(RECEIVED_BYTES)
+            except KeyboardInterrupt:
+                break
             message = Encoder().decode(data.decode())
             logging.debug(f"Received message from {client_address}: {message}")
             
@@ -64,7 +67,7 @@ class Server:
 
                     data, client_address = self.socket.recvfrom(RECEIVED_BYTES)
                     message_start_ack = Encoder().decode(data.decode())
-                    logging.debug(f"mesnsaje:{message}")
+                    logging.debug(f"mensaje:{message}")
 
                     if message_start_ack['command'] == Command.DOWNLOAD_START:
                         logging.info("Client Started listening for download")
