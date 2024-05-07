@@ -11,9 +11,6 @@ if __name__ == "__main__":
     directory_of_file_relative_path = parser_arguments.getArgumentDestination()
 
     file_absolute_path = get_absolute_file_path(directory_of_file_relative_path, file_name)
-    print("")
     
-    #file = File(file_absolute_path, file_name)
-
     client.download_open_conection(file_name)
-    client.download_file(file_absolute_path, file_name)
+    client.download_file(file_absolute_path)

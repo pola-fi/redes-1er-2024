@@ -209,13 +209,11 @@ class Client:
             self.server_port = response_port
         
     
-    def download_file(self, file_path, file_name):
+    def download_file(self, file_client_absolute_path):
         ## devolver un ACK para que empieze a escuchar y quitar el wait
         
         # TODO: Simula la perdida de un paquete cada 100, quitar
         prueba_int = 0
-
-        print(f"path:{file_path}")
 
         print(f"Connection started on host:{self.server_host}, on port:{self.server_port}-")
         
@@ -231,7 +229,7 @@ class Client:
             # (f"the message:{message}")
             if (message['command'] == Command.DOWNLOAD):
                 # print("es un DOWNLOAD msg")
-                prueba_int = self.handle_upload(message, server_address, file_path, prueba_int)
+                prueba_int = self.handle_upload(message, server_address, file_client_absolute_path, prueba_int)
 
 
     def handle_upload(self, message, client_address, file_path, prueba_int):
