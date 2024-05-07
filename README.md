@@ -1,6 +1,6 @@
 
 ## Correr Server
-python3 server-start.py -s '/files/server'
+python3 start-server.py -s '/files/server'
 
 ## Correr Client
-python3 client-start.py -s './files/client' -n 'Archivo.txt' 
+python3 upload.py -s './files/client' -n 'Archivo.txt' 
