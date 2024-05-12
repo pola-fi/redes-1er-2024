@@ -7,7 +7,10 @@ from lib.file import File
 if __name__ == "__main__":
     
     parser_arguments = ParserArgumentUploadClient()
-    client = Client(parser_arguments.getArgumentHost(), parser_arguments.getArgumentPort())
+    client = Client(parser_arguments.getArgumentHost(), 
+                    parser_arguments.getArgumentPort(),
+                    parser_arguments.getArgumentVerbose(),
+                    parser_arguments.getArgumentQuit())
 
     file_name = parser_arguments.getArgumentName()
     directory_of_file_relative_path = parser_arguments.getArgumentSource()

@@ -6,6 +6,9 @@ if __name__ == "__main__":
 
     parser_arguments = ParserArgumentDownloadClient()
 
-    client = Client("127.0.0.1", 8080)
-    client.download_open_conection('Archivo.txt')
+    client = Client(parser_arguments.getArgumentHost(),
+                    parser_arguments.getArgumentPort(),
+                    parser_arguments.getArgumentVerbose(),
+                    parser_arguments.getArgumentQuit())
+    client.download_open_conection(parser_arguments.getArgumentName())
     #client.download_file('/files/client','Archivo.txt')
