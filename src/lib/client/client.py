@@ -4,12 +4,10 @@ from lib.message import ConnectionDownloadMessage
 from lib.message import ResponseUploadMessage
 from lib.message import StartDownloadMessage
 from lib.message import UploadMessage
-from lib.encoder import Encoder
 from lib.command import Command
 from lib.window import Window
 from lib.file import File
 import time
-import os
 import select
 import threading
 from lib.utilities.socket import send_msg
@@ -192,8 +190,8 @@ class Client:
  
     ## Download
 
-    def download_open_conection(self,file: File):
-        message = ConnectionDownloadMessage(file.name)
+    def download_open_conection(self,file: File, windows_size):
+        message = ConnectionDownloadMessage(file.name, windows_size)
 
         send_msg(self.socket, message, self.server_host, self.server_port)
         response_message, server_address = receive_msg(self.socket)
@@ -248,6 +246,15 @@ class Client:
             logging.debug("no se envia este ACK")
 
     ## Selective Download
+
+    def download_with_selective_repeat(self, file: File, file_size_to_download):
+
+        # Simula la perdida de un paquete
+        number_of_packet = 1
+
+        file.create()
+
+
     
                         
                     

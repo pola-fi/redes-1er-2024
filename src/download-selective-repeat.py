@@ -1,14 +1,22 @@
 from lib.client.client import Client
 from lib.ParserArguments import ParserArgumentDownloadClient
 from lib.utilities.file_utilities import get_absolute_file_path
+from lib.file import File
+
+WINDOWS_SIZE = 3
 
 if __name__ == "__main__":
 
     parser_arguments = ParserArgumentDownloadClient()
-
     client = Client(parser_arguments.getArgumentHost(),
                     parser_arguments.getArgumentPort(),
                     parser_arguments.getArgumentVerbose(),
                     parser_arguments.getArgumentQuit())
-    client.download_open_conection(parser_arguments.getArgumentName())
-    #client.download_file('/files/client','Archivo.txt')
+    
+    file_name = parser_arguments.getArgumentName()
+    directory_of_file_relative_path = parser_arguments.getArgumentDestination()
+
+    file = File(get_absolute_file_path(directory_of_file_relative_path, file_name), file_name)
+
+    file_size = client.download_open_conection(file, WINDOWS_SIZE)
+    client.download_file(file, file_size)

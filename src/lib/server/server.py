@@ -12,6 +12,7 @@ import logging
 
 RECEIVED_BYTES = 100000
 DIRECTORY_PATH = '/files/server'
+SELECTIVE_REPEAT_COUNT = 1
 
 class Server:
     def __init__(self, host, port, dir_path, verbose, quiet):
@@ -59,6 +60,7 @@ class Server:
             elif message['command'] == Command.DOWNLOAD_CONECTION:
                 
                 file_name = message['file_name']
+                windows_size = message['windows_size']
                 if self.exist_file(file_name):
                     new_port = self.find_free_port()
                     response_message = ResponseConnectionDownloadMessage(new_port, self.get_size(file_name))
@@ -71,7 +73,7 @@ class Server:
 
                     if message_start_ack['command'] == Command.DOWNLOAD_START:
                         logging.info("Client Started listening for download")
-                        handler = DownloadClientHandler(self.host, new_port, self.get_size(file_name), file_name)
+                        handler = DownloadClientHandler(self.host, new_port, self.get_size(file_name), file_name, windows_size)
                         threading.Thread(target=handler.start).start()
                     
            

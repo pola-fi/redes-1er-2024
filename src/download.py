@@ -16,5 +16,5 @@ if __name__ == "__main__":
     
     file = File(get_absolute_file_path(directory_of_file_relative_path, file_name), file_name)
 
-    file_size = client.download_open_conection(file)
+    file_size = client.download_open_conection(file, 1)
     client.download_file(file, file_size)

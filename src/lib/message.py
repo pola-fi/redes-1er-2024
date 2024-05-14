@@ -72,14 +72,16 @@ class ResponseUploadMessage(Message):
         }
     
 class ConnectionDownloadMessage(Message):
-    def __init__(self, file_name):
+    def __init__(self, file_name, windows_size):
         super().__init__(Command.DOWNLOAD_CONECTION)
         self.file_name = file_name
+        self.windows_size = windows_size
 
     def toJson(self):
         return {
             'command': self.command,
-            'file_name': self.file_name
+            'file_name': self.file_name,
+            'windows_size': self.windows_size
         }
     
 class ResponseConnectionDownloadMessage(Message):
