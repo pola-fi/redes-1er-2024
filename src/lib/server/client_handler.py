@@ -1,14 +1,13 @@
-import socket
-from lib.command import Command
-from lib.encoder import Encoder
-from lib.message import ResponseUploadMessage
-from lib.message import DownloadMessage
-from lib.encoder import Encoder
 import os
 import time
 import select
+import socket
 import logging
 import threading
+
+from lib.command import Command
+from lib.message import ResponseUploadMessage
+from lib.message import DownloadMessage
 from lib.window import Window
 from lib.utilities.socket import send_msg
 from lib.utilities.socket import receive_msg
@@ -35,10 +34,7 @@ class UploadClientHandler:
         prueba_int = 0
 
         while True:
-            data, client_address = self.socket.recvfrom(NUMBER_OF_BYTES_RECEIVED)
-            # self.logging.debug(f"Received data on port {self.port} from {client_address}: {data}")
-            message = Encoder().decode(data.decode())
-            # (f"the message:{message}")
+            message, client_address = receive_msg(self.socket)
             if (message['command'] == Command.UPLOAD):
                 prueba_int = self.handle_upload(message, client_address, prueba_int)
     
@@ -46,9 +42,9 @@ class UploadClientHandler:
         data = message['file_data']
         offset = message['file_offset']
         self.logging.debug(f"recived msg with chunks: {offset/CHUNK_SIZE}")
-        response_message = ResponseUploadMessage(offset).toJson()
+        #response_message = .toJson()
         
-        prueba_int = self.handle_send_ack(response_message, client_address, prueba_int)
+        prueba_int = self.handle_send_ack(ResponseUploadMessage(offset), client_address, prueba_int)
         
         path_file = os.path.join(os.getcwd(),DIRECTORY_PATH.lstrip('/'), self.file_name)
         self.save_file(path_file, data, offset)
@@ -78,8 +74,7 @@ class UploadClientHandler:
 
         #TODO: prueba para simular perdida de paquete, quitar
         if prueba_int % 3 != 0 :
-            self.logging.debug(f"enviando ack con chunk:{response_message['file_offset']/ CHUNK_SIZE}")
-            listener_socket.sendto(Encoder().encode(response_message), client_address)
+            send_msg(listener_socket,response_message, client_address[0], client_address[1])
             listener_socket.close()
         else:
            print("no se envia este ACK")
@@ -124,7 +119,7 @@ class DownloadClientHandler:
                 #print(f"Sent chunk message:{message.toJson()}, to host:{self.client_host}, on port:{self.client_port}")
                 # TODO: Simula la perdida de un paquete cada 100, quitar
                 if prueba_int % 5 != 0 :
-                    self.socket.sendto(Encoder().encode(message.toJson()), (self.client_host, self.client_port))
+                    send_msg(self.socket, message, self.client_host, self.client_port)
 
                 offset = self.handle_recive_message(offset, chunk)
 
@@ -136,9 +131,8 @@ class DownloadClientHandler:
         try:
             ready = select.select([self.socket], [], [], TIMEOUT)
             if ready[0]:
-                response, _ = self.socket.recvfrom(1024)
-                response_decoded = Encoder().decode(response.decode())
-                response_offset = response_decoded['file_offset']
+                response_message, _ = receive_msg(self.socket)
+                response_offset = response_message['file_offset']
                 if response_offset == offset:
                     offset += len(chunk)
             else:
