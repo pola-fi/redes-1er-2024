@@ -108,9 +108,11 @@ class DownloadClientHandler:
 
         path_file = os.path.join(os.getcwd(),DIRECTORY_PATH.lstrip('/'), self.file_name)
 
+        count_finished_ack = 0
+
         print(f"path file:{path_file}")
         with open(path_file, 'rb') as file:
-            while True:
+            while count_finished_ack < 3:
                 file.seek(offset)
                 chunk = file.read(CHUNK_SIZE)
                 if not chunk:
@@ -122,13 +124,13 @@ class DownloadClientHandler:
                 if prueba_int % 5 != 0 :
                     send_msg(self.socket, message, self.client_host, self.client_port)
 
-                offset = self.handle_recive_message(offset, chunk)
+                offset, count_finished_ack = self.handle_recive_message(offset, chunk, count_finished_ack)
 
                 print(f"offset:{offset},chunk_{len(chunk)}")
                     
                 prueba_int += 1
 
-    def handle_recive_message(self, offset, chunk):
+    def handle_recive_message(self, offset, chunk, count_finished_ack):
         try:
             ready = select.select([self.socket], [], [], TIMEOUT)
             if ready[0]:
@@ -137,15 +139,19 @@ class DownloadClientHandler:
                 if response_offset == offset:
                     offset += len(chunk)
             else:
+                if offset + CHUNK_SIZE > self.file_size:
+                    count_finished_ack += 1 
                 # El temporizador ha expirado, no se recibió ninguna respuesta
                 print("No se recibió respuesta del servidor dentro del tiempo de espera.")
         
-            return offset
+            return offset, count_finished_ack
         
         except socket.timeout:
             # El temporizador ha expirado, no se recibió ninguna respuesta
+            if offset + CHUNK_SIZE > self.file_size:
+                count_finished_ack += 1 
             print("No se recibió respuesta del servidor dentro del tiempo de espera.")
-            return offset
+            return offset, count_finished_ack
         
     ## Selective Repeat
 
@@ -209,7 +215,9 @@ class DownloadClientHandler:
 
 
     def read_ack_of_socket(self):
-        while True:
+
+        count_finished_ack = 0
+        while count_finished_ack < 3:
                 
             try:
                 ready = select.select([self.socket], [], [], TIMEOUT)
@@ -226,10 +234,14 @@ class DownloadClientHandler:
                         self.window.remove_all()
                 else:
                     # El temporizador ha expirado, no se recibió ninguna respuesta
+                    if self.window.last_received + self.window.max_size * CHUNK_SIZE > self.file_size:
+                        count_finished_ack += 1
                     logging.debug(f"Time out after {TIMEOUT} seconds")
                     self.window.remove_all()
                         
             except socket.timeout:
                 # El temporizador ha expirado, no se recibió ninguna respuesta
+                if self.window.last_received + self.window.max_size * CHUNK_SIZE > self.file_size:
+                        count_finished_ack += 1
                 logging.debug("Sever Time out")
                 self.window.remove_all()

@@ -164,7 +164,9 @@ class Client:
 
 
     def read_ack_of_socket(self):
-        while True:
+
+        count_finished_ack = 0
+        while count_finished_ack < 3:
                 
             try:
                 ready = select.select([self.socket], [], [], TIMEOUT)
@@ -180,11 +182,14 @@ class Client:
                     else: 
                         self.window.remove_all()
                 else:
-                    # El temporizador ha expirado, no se recibió ninguna respuesta
+                    if self.window.last_received + self.window.max_size * CHUNK_SIZE > self.file.get_size():
+                        count_finished_ack += 1
                     logging.debug(f"Time out after {TIMEOUT} seconds")
                     self.window.remove_all()
                         
             except socket.timeout:
+                if self.window.last_received + self.window.max_size * CHUNK_SIZE > self.file.get_size():
+                        count_finished_ack += 1
                 # El temporizador ha expirado, no se recibió ninguna respuesta
                 logging.debug("Sever Time out")
                 self.window.remove_all()
@@ -245,28 +250,3 @@ class Client:
             send_msg(self.socket, message, client_address[0], client_address[1])
         else:
             logging.debug("no se envia este ACK")
-
-    ## Selective Download
-
-    def download_with_selective_repeat(self, file: File, file_size_to_download):
-
-        # Simula la perdida de un paquete
-        number_of_packet = 1
-
-        file.create()
-
-
-    
-                        
-                    
-        
-
-    
-
-    
-        
-    
-    
-
-
-    
