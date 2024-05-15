@@ -7,6 +7,7 @@ from lib.message import UploadMessage
 from lib.command import Command
 from lib.window import Window
 from lib.file import File
+import base64
 import time
 import select
 import threading
@@ -69,7 +70,7 @@ class Client:
                 if not chunk:
                     break
                 
-                message = UploadMessage(chunk.decode(),offset)
+                message = UploadMessage(chunk, offset)
                 # TODO: Simula la perdida de un paquete cada 5
                 if number_of_packet % 5 != 0 :
                     send_msg(self.socket, message, self.server_host, self.server_port)
@@ -138,7 +139,7 @@ class Client:
                         # time.sleep(1)
                         not_break = False
                     else: 
-                        message = UploadMessage(chunk.decode(), offset)
+                        message = UploadMessage(chunk, offset)
 
                         #print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
                         # TODO: Simula la perdida de un paquete cada 100, quitar
@@ -223,7 +224,7 @@ class Client:
             response_message, server_address = receive_msg(self.socket)
             if (response_message['command'] == Command.DOWNLOAD):
 
-                data = response_message['file_data']
+                data = base64.b64decode(response_message['file_data'])
                 offset = response_message['file_offset']
 
                 logging.debug(f"Recibed data with offset:{offset}")

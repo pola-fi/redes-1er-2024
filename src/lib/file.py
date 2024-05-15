@@ -24,6 +24,6 @@ class File():
         if file_exists(self.absolute_path):
             with open(self.absolute_path, 'r+b') as file:
                 file.seek(offset)
-                file.write(data.encode())
+                file.write(data)
         else:
             print(f"file:{self.absolute_path} doesn't exist")

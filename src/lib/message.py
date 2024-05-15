@@ -1,5 +1,6 @@
 from lib.command import Command
 from abc import ABC, abstractmethod
+import base64
 
 class Message(ABC):
     def __init__(self, command):
@@ -43,7 +44,7 @@ class DownloadMessage(Message):
     def toJson(self):
         return {
             'command': self.command,
-            'file_data': self.file_chunk,
+            'file_data': base64.b64encode(self.file_chunk).decode(),
             'file_offset': self.file_offset
         }
 
@@ -56,7 +57,7 @@ class UploadMessage(Message):
     def toJson(self):
         return {
             'command': self.command,
-            'file_data': self.file_data,
+            'file_data': base64.b64encode(self.file_data).decode(),
             'file_offset': self.file_offset
         }
 

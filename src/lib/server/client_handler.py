@@ -2,6 +2,7 @@ import os
 import time
 import select
 import socket
+import base64
 import logging
 import threading
 
@@ -39,7 +40,7 @@ class UploadClientHandler:
                 prueba_int = self.handle_upload(message, client_address, prueba_int)
     
     def handle_upload(self, message, client_address, prueba_int):
-        data = message['file_data']
+        data = base64.b64decode(message['file_data'])
         offset = message['file_offset']
         self.logging.debug(f"recived msg with chunks: {offset/CHUNK_SIZE}")
         #response_message = .toJson()
@@ -61,12 +62,12 @@ class UploadClientHandler:
                 # Mover el puntero de escritura al offset recibido
                 file.seek(offset)
                 # Escribir los datos en el archivo
-                file.write(data.encode())
+                file.write(data)
         else:
             # Si el archivo no existe o el offset es mayor que el tamaño actual del archivo,
             # se crea o se actualiza el archivo desde el principio
             with open(path_file, 'ab+') as file:
-                file.write(data.encode())
+                file.write(data)
 
     #TODO: Vuela, con la perdida de paquetas, queda solo el envio 
     def handle_send_ack(self, response_message, client_address, prueba_int):
@@ -115,7 +116,7 @@ class DownloadClientHandler:
                 if not chunk:
                     break
                 
-                message = DownloadMessage(chunk.decode(),offset)
+                message = DownloadMessage(chunk ,offset)
                 #print(f"Sent chunk message:{message.toJson()}, to host:{self.client_host}, on port:{self.client_port}")
                 # TODO: Simula la perdida de un paquete cada 100, quitar
                 if prueba_int % 5 != 0 :
@@ -185,7 +186,7 @@ class DownloadClientHandler:
                         # time.sleep(1)
                         not_break = False
                     else: 
-                        message = DownloadMessage(chunk.decode(), offset)
+                        message = DownloadMessage(chunk, offset)
 
                         #print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
                         # TODO: Simula la perdida de un paquete cada 100, quitar
