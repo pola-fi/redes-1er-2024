@@ -59,8 +59,6 @@ class Client:
         ## Espera para que el server este escuchando
         time.sleep(1)
 
-        # para silumar una perdida de paquete
-        number_of_packet = 1
         offset = 0
 
         with open(file.absolute_path, 'rb') as open_file:
@@ -71,16 +69,12 @@ class Client:
                     break
                 
                 message = UploadMessage(chunk, offset)
-                # TODO: Simula la perdida de un paquete cada 5
-                if number_of_packet % 5 != 0 :
-                    send_msg(self.socket, message, self.server_host, self.server_port)
+                send_msg(self.socket, message, self.server_host, self.server_port)
 
                 chunk_size = len(chunk)
                 offset = self.handle_recive_message(offset, chunk_size)
 
                 logging.debug(f"offset:{offset},chunk size:{chunk_size}")
-                    
-                number_of_packet += 1
 
     def handle_recive_message(self, offset, chunk_size):
         try:
@@ -91,13 +85,11 @@ class Client:
                 if response_message['file_offset'] == offset:
                     offset += chunk_size
             else:
-                # El temporizador ha expirado, no se recibió ninguna respuesta
                 logging.debug(f"Time out after {TIMEOUT} seconds")
         
             return offset
         
         except socket.timeout:
-            # El temporizador ha expirado, no se recibió ninguna respuesta
             logging.debug("Sever Time out")
 
     ## Selective Upload
@@ -119,8 +111,6 @@ class Client:
         leer_thread.join()
 
     def write_chunk_to_socket(self):
-
-        number_of_packet = 1
         not_break = True
 
         with open(self.file.absolute_path, 'rb') as open_file:
@@ -141,24 +131,11 @@ class Client:
                     else: 
                         message = UploadMessage(chunk, offset)
 
-                        #print(f"Sent chunk message:{message.toJson()}, to host:{self.server_host}, on port:{self.server_port}")
-                        # TODO: Simula la perdida de un paquete cada 100, quitar
-                        
-                        if number_of_packet % 3 != 0 :
+                        self.window.add(offset)
+                        logging.debug(f"chunk number sent: {offset / self.window.chunk_size}, offset: {offset}")
+                        send_msg(self.socket, message, self.server_host, self.server_port)
+                        self.window.last_sended = offset
 
-                            self.window.add(offset)
-                            logging.debug(f"chunk number sent: {offset / self.window.chunk_size}, offset: {offset}")
-                            send_msg(self.socket, message, self.server_host, self.server_port)
-                            self.window.last_sended = offset
-
-                        
-
-                        number_of_packet += 1
-
-                    
-                # else: 
-                #     print(f"windows dont have space")
-                #     time.sleep(1)
             logging.debug("termine de mandar escritura")
             logging.debug(f"windows last_received:{self.window.last_received}, windows last_sended:{self.window.last_sended}")
 
@@ -167,7 +144,6 @@ class Client:
 
         count_finished_ack = 0
         while count_finished_ack < 3:
-                
             try:
                 ready = select.select([self.socket], [], [], TIMEOUT)
                 if ready[0]:
@@ -184,14 +160,15 @@ class Client:
                 else:
                     if self.window.last_received + self.window.max_size * CHUNK_SIZE > self.file.get_size():
                         count_finished_ack += 1
-                    logging.debug(f"Time out after {TIMEOUT} seconds")
+                    else:
+                        logging.debug(f"Time out after {TIMEOUT} seconds")
                     self.window.remove_all()
                         
             except socket.timeout:
                 if self.window.last_received + self.window.max_size * CHUNK_SIZE > self.file.get_size():
-                        count_finished_ack += 1
-                # El temporizador ha expirado, no se recibió ninguna respuesta
-                logging.debug("Sever Time out")
+                    count_finished_ack += 1
+                else:
+                    logging.debug("Sever Time out")
                 self.window.remove_all()
  
     ## Download
@@ -220,9 +197,6 @@ class Client:
 
     def download_file(self, file: File, file_size_to_download):
 
-        # Simula la perdida de un paquete
-        number_of_packet = 1
-
         file.create()
         
         while file.get_size() < file_size_to_download:
@@ -234,19 +208,8 @@ class Client:
 
                 logging.debug(f"Recibed data with offset:{offset}")
                 file.write(data, offset)
-                self.handle_send_ack(offset, server_address, number_of_packet)
+                self.handle_send_ack(offset, server_address)   
 
-                number_of_packet += 1        
-
-        #TODO: Agregar envio msg de finalizacion y ACK, o que el server deje de enviar ante un time out, si es el ultimo paquete
-
-    #TODO: Vuela, con la perdida de paquetas, queda solo el envio 
-    def handle_send_ack(self, offset, client_address, number_of_packet):
-
-        #prueba para simular perdida de paquete cada 6
-        logging.debug(f"number of packet {number_of_packet}")
-        if number_of_packet % 6 != 0 :
-            message = ResponseUploadMessage(offset)
-            send_msg(self.socket, message, client_address[0], client_address[1])
-        else:
-            logging.debug("no se envia este ACK")
+    def handle_send_ack(self, offset, client_address):
+        message = ResponseUploadMessage(offset)
+        send_msg(self.socket, message, client_address[0], client_address[1])
